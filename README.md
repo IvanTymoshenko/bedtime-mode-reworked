@@ -28,9 +28,8 @@ scheduled. But while it's running, notifications **still appear in the shade and
 which completely defeats the point. On top of that, the Bedtime toggle was removed from the
 quick settings panel.
 
-I posted about it on r/Oppo and searched around. It didn't look like there was a fix, and I
-didn't seem to be the only one affected. So I built the app myself: it does what Bedtime mode
-used to do, and it doesn't depend on the phone's broken built-in feature.
+So I built the app myself: it does what Bedtime mode used to do, and it doesn't depend on the
+phone's broken built-in feature.
 
 If your phone's bedtime mode lets notifications through, this is for you. It works on any
 Android 10+ phone, not just OPPO.
