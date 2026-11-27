@@ -81,10 +81,14 @@ object Updater {
 
     /** Remembers the found release so the UI can show it without another network call. */
     fun checkNow(ctx: Context): Release? {
+        Prefs(ctx).lastUpdateCheck = System.currentTimeMillis()
+        return fetchLatest()?.let { remember(ctx, it) }
+    }
+
+    /** Store [r] as the available update if it's newer; returns it, or null when up to date. */
+    fun remember(ctx: Context, r: Release): Release? {
         val p = Prefs(ctx)
-        p.lastUpdateCheck = System.currentTimeMillis()
-        val r = fetchLatest()
-        if (r != null && isNewer(r.version)) {
+        if (isNewer(r.version)) {
             p.availableUpdateJson = JSONObject()
                 .put("version", r.version).put("notes", r.notes)
                 .put("apk", r.apkUrl).put("page", r.pageUrl).toString()

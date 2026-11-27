@@ -113,12 +113,12 @@ fun AboutCard(onChecked: () -> Unit) {
                     checking = true
                     status = "Checking…"
                     scope.launch {
-                        val found = withContext(Dispatchers.IO) { Updater.fetchLatest() }
-                        val r = withContext(Dispatchers.IO) { Updater.checkNow(ctx) }
+                        val latest = withContext(Dispatchers.IO) { Updater.fetchLatest() }
+                        val newer = latest?.let { withContext(Dispatchers.IO) { Updater.remember(ctx, it) } }
                         status = when {
-                            r != null -> "Version ${r.version} is available — see the top of the screen."
-                            found != null -> "You're up to date."
-                            else -> "Couldn't reach GitHub. Check your internet connection."
+                            latest == null -> "Couldn't reach GitHub. Check your internet connection."
+                            newer != null -> "Version ${newer.version} is available — see the top of the screen."
+                            else -> "You're up to date (${Updater.currentVersion})."
                         }
                         checking = false
                         onChecked()
