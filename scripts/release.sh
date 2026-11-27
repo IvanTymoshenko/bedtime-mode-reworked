@@ -14,10 +14,10 @@ NOTES=$(awk -v v="## $VERSION" '$0==v{f=1;next} /^## /{f=0} f' CHANGELOG.md)
 if git rev-parse "$TAG" >/dev/null 2>&1; then echo "Tag $TAG already exists — bump versionName first"; exit 1; fi
 
 ./gradlew clean assembleRelease --console=plain -q
-OUT="build/BedtimeMode-$VERSION.apk"
+OUT="build/BedtimeModeReworked-$VERSION.apk"
 mkdir -p build && cp app/build/outputs/apk/release/app-release.apk "$OUT"
 
 git tag "$TAG"
 git push origin "$TAG"
-gh release create "$TAG" "$OUT" --title "Bedtime Mode $VERSION" --notes "$NOTES"
+gh release create "$TAG" "$OUT" --title "Bedtime Mode Reworked $VERSION" --notes "$NOTES"
 echo "Published $TAG"

@@ -10,11 +10,12 @@ import android.service.notification.ZenPolicy
 import android.util.Log
 
 /**
- * Silences the phone via an app-owned AutomaticZenRule (shows up as "Bedtime Mode" in the
+ * Silences the phone via an app-owned AutomaticZenRule (shows up as "Bedtime Mode Reworked" in the
  * system DND settings). It never touches the user's global DND policy, so turning it off
  * leaves everything as it was. This only silences; hiding from the shade is the listener's job.
  */
 object Dnd {
+    private const val RULE_NAME = "Bedtime Mode Reworked"
     private fun nm(ctx: Context) = ctx.getSystemService(NotificationManager::class.java)
 
     fun hasAccess(ctx: Context) = nm(ctx).isNotificationPolicyAccessGranted
@@ -32,7 +33,7 @@ object Dnd {
             .build()
         @Suppress("DEPRECATION")
         return AutomaticZenRule(
-            "Bedtime Mode",
+            RULE_NAME,
             null,
             ComponentName(ctx, MainActivity::class.java),
             conditionUri(ctx),
@@ -45,7 +46,14 @@ object Dnd {
     private fun ensureRule(ctx: Context): String {
         val p = Prefs(ctx)
         val nm = nm(ctx)
-        p.zenRuleId?.let { id -> if (nm.getAutomaticZenRule(id) != null) return id }
+        p.zenRuleId?.let { id ->
+            val existing = nm.getAutomaticZenRule(id)
+            if (existing != null) {
+                // Keep the rule's visible name in sync after a rename.
+                if (existing.name != RULE_NAME) runCatching { nm.updateAutomaticZenRule(id, buildRule(ctx)) }
+                return id
+            }
+        }
         val id = nm.addAutomaticZenRule(buildRule(ctx))
         p.zenRuleId = id
         Log.i(TAG, "dnd: created zen rule $id")

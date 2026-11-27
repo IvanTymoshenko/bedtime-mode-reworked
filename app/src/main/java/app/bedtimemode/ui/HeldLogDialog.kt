@@ -28,7 +28,7 @@ import androidx.compose.ui.window.DialogProperties
 import app.bedtimemode.Format
 import app.bedtimemode.HeldLog
 
-/** Everything Bedtime Mode hid in the last 7 days. Tap an entry to open its app. */
+/** Everything Bedtime Mode Reworked hid in the last 7 days. Tap an entry to open its app. */
 @Composable
 fun HeldLogDialog(onDismiss: () -> Unit) {
     val ctx = LocalContext.current
@@ -48,7 +48,7 @@ fun HeldLogDialog(onDismiss: () -> Unit) {
                     TextButton(onClick = onDismiss) { Text("Close") }
                 }
                 Text(
-                    "Everything Bedtime Mode hid in the last 7 days, newest first. Tap one to open its app.",
+                    "Everything Bedtime Mode Reworked hid in the last 7 days, newest first. Tap one to open its app.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -62,7 +62,7 @@ fun UpdateCard(forceCheck: Boolean, onShown: () -> Unit, refreshKey: Int = 0) {
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             if (needsPermission) {
                 Text(
-                    "Allow \"Install unknown apps\" for Bedtime Mode, then come back and tap Update again.",
+                    "Allow \"Install unknown apps\" for Bedtime Mode Reworked, then come back and tap Update again.",
                     style = MaterialTheme.typography.bodySmall,
                 )
             }

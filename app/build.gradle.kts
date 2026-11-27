@@ -18,7 +18,7 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         // GitHub repo used for in-app update checks (owner/name).
-        buildConfigField("String", "GITHUB_REPO", "\"IvanTymoshenko/bedtime-mode\"")
+        buildConfigField("String", "GITHUB_REPO", "\"IvanTymoshenko/bedtime-mode-reworked\"")
     }
 
     // Release signing comes from keystore.properties (never committed). Every published APK

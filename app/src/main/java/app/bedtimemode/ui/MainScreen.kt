@@ -132,7 +132,7 @@ fun MainScreen(showUpdate: Boolean = false, onUpdateShown: () -> Unit = {}) {
     val s = remember(tick) { readState(ctx, prefs) }
     val changed: () -> Unit = { Bedtime.sync(ctx, "settings") }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Bedtime Mode") }) }) { pad ->
+    Scaffold(topBar = { TopAppBar(title = { Text("Bedtime Mode Reworked") }) }) { pad ->
         BoxWithConstraints(Modifier.padding(pad).fillMaxSize()) {
             val status: @Composable () -> Unit = {
                 UpdateCard(forceCheck = showUpdate, onShown = onUpdateShown, refreshKey = updateKey)

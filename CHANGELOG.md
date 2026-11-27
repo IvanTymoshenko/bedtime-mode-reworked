@@ -1,4 +1,4 @@
-# Changelog
+# Changelog — Bedtime Mode Reworked
 
 ## 1.0.0
 - Hides all notifications at bedtime and brings them back to the shade when it ends

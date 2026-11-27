@@ -58,7 +58,7 @@ object Updater {
             connectTimeout = 10_000
             readTimeout = 15_000
             setRequestProperty("Accept", "application/vnd.github+json")
-            setRequestProperty("User-Agent", "BedtimeMode-Android")
+            setRequestProperty("User-Agent", "BedtimeModeReworked-Android")
         }
         conn.inputStream.bufferedReader().use { it.readText() }.let { body ->
             val o = JSONObject(body)
@@ -144,7 +144,7 @@ object Updater {
         )
         val n = Notification.Builder(ctx, CHANNEL)
             .setSmallIcon(R.drawable.ic_bedtime)
-            .setContentTitle("Bedtime Mode ${r.version} is available")
+            .setContentTitle("Bedtime Mode Reworked ${r.version} is available")
             .setContentText(r.notes.lineSequence().firstOrNull { it.isNotBlank() }?.trimStart('-', '*', ' ') ?: "Tap to see what's new")
             .setContentIntent(open)
             .setAutoCancel(true)
@@ -168,7 +168,7 @@ object Updater {
             connectTimeout = 15_000
             readTimeout = 30_000
             instanceFollowRedirects = true
-            setRequestProperty("User-Agent", "BedtimeMode-Android")
+            setRequestProperty("User-Agent", "BedtimeModeReworked-Android")
         }
         val total = conn.contentLengthLong
         conn.inputStream.use { input ->

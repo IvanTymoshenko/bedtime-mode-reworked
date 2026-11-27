@@ -88,7 +88,7 @@ fun Onboarding(onDone: () -> Unit) {
 
                 when (step) {
                     Step.WELCOME -> StepBody(
-                        title = "Welcome to Bedtime Mode",
+                        title = "Welcome to Bedtime Mode Reworked",
                         text = "At night this app hides every notification from your notification shade and " +
                             "keeps the phone silent. In the morning, everything comes back to the shade so " +
                             "you can review it.\n\nIt needs a few permissions. This takes about a minute, " +
@@ -101,7 +101,7 @@ fun Onboarding(onDone: () -> Unit) {
                         title = "1. Notification access",
                         text = "This lets the app hide notifications at bedtime and bring them back in the " +
                             "morning. Nothing is read, stored or sent anywhere.\n\n" +
-                            "Tap the button, then turn on \"Bedtime Mode\".",
+                            "Tap the button, then turn on \"Bedtime Mode Reworked\".",
                         done = setup.listener,
                     ) {
                         GrantOrNext(setup.listener, "Open notification access", { Setup.openListenerSettings(ctx) }, next)
@@ -120,7 +120,7 @@ fun Onboarding(onDone: () -> Unit) {
                     Step.DND -> StepBody(
                         title = "2. Do Not Disturb access",
                         text = "Used to silence sound, vibration and pop-ups at bedtime. Alarms will still " +
-                            "ring.\n\nTap the button, then allow \"Bedtime Mode\".",
+                            "ring.\n\nTap the button, then allow \"Bedtime Mode Reworked\".",
                         done = setup.dnd,
                     ) { GrantOrNext(setup.dnd, "Open Do Not Disturb access", { Setup.openDndSettings(ctx) }, next) }
 
@@ -140,7 +140,7 @@ fun Onboarding(onDone: () -> Unit) {
                     Step.BATTERY -> StepBody(
                         title = "4. Keep it running at night",
                         text = "Phones (especially OPPO, OnePlus, Xiaomi, Samsung) close background apps to " +
-                            "save battery. That would stop Bedtime Mode in the middle of the night.",
+                            "save battery. That would stop Bedtime Mode Reworked in the middle of the night.",
                         done = setup.battery,
                     ) {
                         if (!setup.battery) {
@@ -151,8 +151,8 @@ fun Onboarding(onDone: () -> Unit) {
                         HintCard(
                             "On ColorOS / OxygenOS also:",
                             "• App info → Battery usage → select \"Allow background activity\"\n" +
-                                "• If your phone has an \"Auto launch\" setting, turn it on for Bedtime Mode\n" +
-                                "• In Recent apps, lock the Bedtime Mode card so it isn't cleared",
+                                "• If your phone has an \"Auto launch\" setting, turn it on for Bedtime Mode Reworked\n" +
+                                "• In Recent apps, lock the Bedtime Mode Reworked card so it isn't cleared",
                         ) { OutlinedButton(onClick = { Setup.openAppDetails(ctx) }) { Text("Open App info") } }
                         Button(onClick = next, Modifier.fillMaxWidth()) { Text(if (setup.battery) "Next" else "Skip for now") }
                     }
@@ -163,7 +163,7 @@ fun Onboarding(onDone: () -> Unit) {
                             "fight with this app. Turn off their schedules:\n\n" +
                             "• Digital Wellbeing → Bedtime mode → Bedtime routine → None\n" +
                             "• Do Not Disturb → Schedules → turn off old schedules\n\n" +
-                            "Keep the \"Bedtime Mode\" schedule entry ON — that one is this app.",
+                            "Keep the \"Bedtime Mode Reworked\" schedule entry ON — that one is this app.",
                     ) {
                         OutlinedButton(onClick = { Setup.openZenSettings(ctx) }, Modifier.fillMaxWidth()) {
                             Text("Open Do Not Disturb settings")
