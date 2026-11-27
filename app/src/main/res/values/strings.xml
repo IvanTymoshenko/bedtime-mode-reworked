@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Bedtime Mode</string>
+    <string name="tile_label">Bedtime</string>
+</resources>
