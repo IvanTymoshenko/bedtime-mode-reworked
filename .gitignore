@@ -9,3 +9,9 @@ captures/
 keystore.properties
 *.jks
 *.keystore
+
+# Claude Code / AI assistant files (local only)
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+.mcp.json
