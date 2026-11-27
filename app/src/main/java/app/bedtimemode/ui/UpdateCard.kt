@@ -1,13 +1,20 @@
 package app.bedtimemode.ui
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,30 +30,84 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import app.bedtimemode.BuildConfig
 import app.bedtimemode.Release
 import app.bedtimemode.Updater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Shows "Update available" with the release notes; downloads and installs in-app. */
+/** Download + install state for one release; shared by the card and the pop-up. */
+private class UpdateState {
+    var progress by mutableStateOf<Float?>(null)
+    var error by mutableStateOf<String?>(null)
+    var needsPermission by mutableStateOf(false)
+}
+
+@Composable
+private fun rememberUpdateState(): UpdateState {
+    val ctx = LocalContext.current
+    val st = remember { UpdateState() }
+    LifecycleResumeEffect(Unit) {
+        st.needsPermission = st.needsPermission && !Updater.canInstall(ctx)
+        onPauseOrDispose { }
+    }
+    return st
+}
+
+/** Version line, notes, progress and errors. */
+@Composable
+private fun UpdateBody(r: Release, st: UpdateState) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("You have ${Updater.currentVersion}. What's new:", style = MaterialTheme.typography.bodySmall)
+        Text(r.notes.ifBlank { "Bug fixes and improvements." }, style = MaterialTheme.typography.bodyMedium)
+        st.progress?.let { LinearProgressIndicator(progress = { it }, modifier = Modifier.fillMaxWidth()) }
+        st.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+        if (st.needsPermission) {
+            Text(
+                "Allow \"Install unknown apps\" for Bedtime Mode Reworked, then come back and tap Update again.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+
+@Composable
+private fun UpdateButton(r: Release, st: UpdateState) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    Button(enabled = st.progress == null, onClick = {
+        if (!Updater.canInstall(ctx)) {
+            st.needsPermission = true
+            Updater.openInstallPermission(ctx)
+            return@Button
+        }
+        st.error = null
+        st.progress = 0f
+        scope.launch {
+            runCatching {
+                val apk = withContext(Dispatchers.IO) { Updater.download(ctx, r) { p -> st.progress = p } }
+                withContext(Dispatchers.IO) { Updater.install(ctx, apk) }
+            }.onFailure { st.error = "Update failed: ${it.message}" }
+            st.progress = null
+        }
+    }) { Text("Update now") }
+}
+
+private fun openUrl(ctx: android.content.Context, url: String) =
+    ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+
+/** Shows "Update available" with the release notes at the top of the main screen. */
 @Composable
 fun UpdateCard(forceCheck: Boolean, onShown: () -> Unit, refreshKey: Int = 0) {
     val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
     var release by remember(refreshKey) { mutableStateOf<Release?>(Updater.cached(ctx)) }
-    var progress by remember { mutableStateOf<Float?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var needsPermission by remember { mutableStateOf(false) }
+    val st = rememberUpdateState()
 
     LaunchedEffect(forceCheck) {
         // Check on open (cheap: one small API call) so users see updates without waiting.
         release = withContext(Dispatchers.IO) { Updater.checkNow(ctx) } ?: Updater.cached(ctx)
         if (forceCheck) onShown()
-    }
-    LifecycleResumeEffect(Unit) {
-        needsPermission = needsPermission && !Updater.canInstall(ctx)
-        onPauseOrDispose { }
     }
 
     val r = release ?: return
@@ -56,49 +117,28 @@ fun UpdateCard(forceCheck: Boolean, onShown: () -> Unit, refreshKey: Int = 0) {
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Update available: ${r.version}", style = MaterialTheme.typography.titleMedium)
-            Text("You have ${Updater.currentVersion}. What's new:", style = MaterialTheme.typography.bodySmall)
-            Text(r.notes.ifBlank { "Bug fixes and improvements." }, style = MaterialTheme.typography.bodyMedium)
-            progress?.let { LinearProgressIndicator(progress = { it }, modifier = Modifier.fillMaxWidth()) }
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-            if (needsPermission) {
-                Text(
-                    "Allow \"Install unknown apps\" for Bedtime Mode Reworked, then come back and tap Update again.",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
+            UpdateBody(r, st)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(enabled = progress == null, onClick = {
-                    if (!Updater.canInstall(ctx)) {
-                        needsPermission = true
-                        Updater.openInstallPermission(ctx)
-                        return@Button
-                    }
-                    error = null
-                    progress = 0f
-                    scope.launch {
-                        runCatching {
-                            val apk = withContext(Dispatchers.IO) { Updater.download(ctx, r) { p -> progress = p } }
-                            withContext(Dispatchers.IO) { Updater.install(ctx, apk) }
-                        }.onFailure { error = "Update failed: ${it.message}" }
-                        progress = null
-                    }
-                }) { Text("Update now") }
-                TextButton(onClick = {
-                    ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(r.pageUrl))
-                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-                }) { Text("Details") }
+                UpdateButton(r, st)
+                TextButton(onClick = { openUrl(ctx, r.pageUrl) }) { Text("Details") }
             }
         }
     }
 }
 
-/** Settings section: version + manual "Check for updates". */
+private sealed interface CheckResult {
+    data object Checking : CheckResult
+    data object UpToDate : CheckResult
+    data object Offline : CheckResult
+    data class Available(val r: Release) : CheckResult
+}
+
+/** Settings section: version + "Check for updates", which answers in a pop-up. */
 @Composable
 fun AboutCard(onChecked: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    var status by remember { mutableStateOf<String?>(null) }
-    var checking by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<CheckResult?>(null) }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("About", style = MaterialTheme.typography.titleMedium)
@@ -109,30 +149,50 @@ fun AboutCard(onChecked: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                androidx.compose.material3.FilledTonalButton(enabled = !checking, onClick = {
-                    checking = true
-                    status = "Checking…"
+                FilledTonalButton(enabled = result != CheckResult.Checking, onClick = {
+                    result = CheckResult.Checking
                     scope.launch {
                         val latest = withContext(Dispatchers.IO) { Updater.fetchLatest() }
                         val newer = latest?.let { withContext(Dispatchers.IO) { Updater.remember(ctx, it) } }
-                        status = when {
-                            latest == null -> "Couldn't reach GitHub. Check your internet connection."
-                            newer != null -> "Version ${newer.version} is available — see the top of the screen."
-                            else -> "You're up to date (${Updater.currentVersion})."
+                        result = when {
+                            latest == null -> CheckResult.Offline
+                            newer != null -> CheckResult.Available(newer)
+                            else -> CheckResult.UpToDate
                         }
-                        checking = false
                         onChecked()
                     }
-                }) { Text("Check for updates") }
-                TextButton(onClick = {
-                    ctx.startActivity(
-                        android.content.Intent(android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse("https://github.com/${app.bedtimemode.BuildConfig.GITHUB_REPO}"))
-                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-                    )
-                }) { Text("GitHub page") }
+                }) { Text(if (result == CheckResult.Checking) "Checking…" else "Check for updates") }
+                TextButton(onClick = { openUrl(ctx, "https://github.com/${BuildConfig.GITHUB_REPO}") }) { Text("GitHub page") }
             }
-            status?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
         }
+    }
+
+    val dismiss = { result = null }
+    when (val r = result) {
+        is CheckResult.Available -> {
+            val st = rememberUpdateState()
+            AlertDialog(
+                onDismissRequest = { if (st.progress == null) dismiss() },
+                title = { Text("Update available: ${r.r.version}") },
+                text = {
+                    Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) { UpdateBody(r.r, st) }
+                },
+                confirmButton = { UpdateButton(r.r, st) },
+                dismissButton = { TextButton(enabled = st.progress == null, onClick = dismiss) { Text("Later") } },
+            )
+        }
+        CheckResult.UpToDate -> AlertDialog(
+            onDismissRequest = dismiss,
+            title = { Text("You're up to date") },
+            text = { Text("Version ${Updater.currentVersion} is the latest.") },
+            confirmButton = { TextButton(onClick = dismiss) { Text("OK") } },
+        )
+        CheckResult.Offline -> AlertDialog(
+            onDismissRequest = dismiss,
+            title = { Text("Couldn't check") },
+            text = { Text("Couldn't reach GitHub. Check your internet connection and try again.") },
+            confirmButton = { TextButton(onClick = dismiss) { Text("OK") } },
+        )
+        else -> {}
     }
 }

@@ -1,7 +1,10 @@
 # Changelog — Bedtime Mode Reworked
 
+## 1.1.2
+- "Check for updates" (Settings → About) now opens a pop-up: update right there, or see that you're up to date
+
 ## 1.1.1
-- The "Bedtime is on" notification no longer shows how many notifications are hidden (turn on "Show hidden count" in Options if you want it)
+- The "Bedtime is on" notification no longer shows how many notifications are hidden (turn on "Show how many are hidden" in Settings if you want it)
 - New option to turn off the "Bedtime is on" notification completely
 - Settings are grouped (Look, Schedule, Sound, What to hide, "Bedtime is on" notice, Permissions, About) with simpler wording
 - Tap anywhere on a setting to switch it, not just the switch
