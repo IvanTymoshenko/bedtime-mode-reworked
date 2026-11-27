@@ -47,6 +47,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("hide_existing", true)
         set(v) = sp.edit { putBoolean("hide_existing", v) }
 
+    /** Also hide notifications from Android itself and background system services. */
+    var hideSystem: Boolean
+        get() = sp.getBoolean("hide_system", true)
+        set(v) = sp.edit { putBoolean("hide_system", v) }
+
     var allowedPackages: Set<String>
         get() = sp.getStringSet("allowed_packages", emptySet())!!.toSet()
         set(v) = sp.edit { putStringSet("allowed_packages", v) }

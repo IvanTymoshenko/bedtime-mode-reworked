@@ -113,7 +113,6 @@ object Bedtime {
             if (!p.appliedActive) {
                 p.sessionStartedAt = now
                 p.heldKeys = emptySet()
-                p.pendingReturnKeys = emptySet()
                 p.appliedActive = true
             }
             p.sessionEndsAt = st.endsAt ?: 0L

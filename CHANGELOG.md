@@ -8,5 +8,7 @@
 - "Bedtime is on" notification with a Turn off button
 - History of what was hidden each night
 - Allowed apps
+- Option to hide or show system notifications
+- Own log of everything hidden (7 days), viewable in the app
 - Step-by-step setup
 - In-app updates

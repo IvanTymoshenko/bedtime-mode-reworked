@@ -70,6 +70,7 @@ private data class UiState(
     val useDnd: Boolean,
     val allowCalls: Boolean,
     val hideExisting: Boolean,
+    val hideSystem: Boolean,
     val allowedCount: Int,
     val heldApps: Map<String, Int>,
     val history: List<SessionRecord>,
@@ -86,6 +87,7 @@ private fun readState(ctx: Context, p: Prefs) = UiState(
     useDnd = p.useDnd,
     allowCalls = p.allowCalls,
     hideExisting = p.hideExisting,
+    hideSystem = p.hideSystem,
     allowedCount = p.allowedPackages.size,
     heldApps = History.appCounts(p.heldKeys),
     history = History.read(p),
@@ -108,6 +110,7 @@ fun MainScreen(showUpdate: Boolean = false, onUpdateShown: () -> Unit = {}) {
     val prefs = remember { Prefs(ctx) }
     var tick by remember { mutableIntStateOf(0) }
     var showApps by remember { mutableStateOf(false) }
+    var showHeld by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         val l = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> tick++ }
@@ -133,7 +136,7 @@ fun MainScreen(showUpdate: Boolean = false, onUpdateShown: () -> Unit = {}) {
             val status: @Composable () -> Unit = {
                 UpdateCard(forceCheck = showUpdate, onShown = onUpdateShown)
                 StatusCard(s, ctx, onToggle = { Bedtime.toggle(ctx) })
-                HistoryCard(s, ctx)
+                HistoryCard(s, ctx, onShowHeld = { showHeld = true })
             }
             val settings: @Composable () -> Unit = {
                 SetupCard(s, ctx)
@@ -175,6 +178,7 @@ fun MainScreen(showUpdate: Boolean = false, onUpdateShown: () -> Unit = {}) {
         }
     }
 
+    if (showHeld) HeldLogDialog(onDismiss = { showHeld = false })
     if (showApps) AllowedAppsDialog(prefs, onDismiss = { showApps = false; changed() })
 }
 
@@ -273,7 +277,9 @@ private fun SetupRow(title: String, subtitle: String, ok: Boolean, onGrant: () -
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ScheduleCard(s: UiState, ctx: Context, p: Prefs, changed: () -> Unit) {
+private fun ScheduleCard(s: UiState, ctx: Context, p: Prefs, settingsChanged: () -> Unit) {
+    // A new schedule replaces any manual on/off that was based on the old one.
+    val changed = { p.clearOverride(); settingsChanged() }
     SectionCard("Schedule") {
         SwitchRow("Use schedule", null, s.scheduleEnabled) { p.scheduleEnabled = it; changed() }
         Row(Modifier.fillMaxWidth()) {
@@ -317,6 +323,15 @@ private fun OptionsCard(s: UiState, p: Prefs, ctx: Context, changed: () -> Unit,
         SwitchRow("Let important calls through", "Starred contacts and repeat callers", s.allowCalls) {
             p.allowCalls = it; Dnd.refreshRule(ctx); changed()
         }
+        SwitchRow(
+            "Hide system notifications",
+            "From Android and background system services (hotspot, USB, battery warnings…). Ongoing status is never hidden.",
+            s.hideSystem,
+        ) {
+            p.hideSystem = it
+            if (!it) app.bedtimemode.BedtimeListenerService.releaseSystem(ctx)
+            changed()
+        }
         SwitchRow("Hide existing notifications", "Also clear what's already in the shade when bedtime starts", s.hideExisting) {
             p.hideExisting = it; changed()
         }
@@ -351,8 +366,9 @@ private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChan
 }
 
 @Composable
-private fun HistoryCard(s: UiState, ctx: Context) {
+private fun HistoryCard(s: UiState, ctx: Context, onShowHeld: () -> Unit) {
     SectionCard("History") {
+        FilledTonalButton(onClick = onShowHeld) { Text("See everything that was hidden") }
         if (s.history.isEmpty()) {
             Text(
                 "No finished sessions yet. After each bedtime you'll see here what was hidden and what came back.",

@@ -57,7 +57,8 @@ object History {
         val keys = p.heldKeys
         val record = SessionRecord(p.sessionStartedAt, now, keys.size, 0, appCounts(keys))
         write(p, listOf(record) + read(p))
-        p.pendingReturnKeys = keys
+        // Keep anything from earlier sessions that hasn't come back yet, so it's released too.
+        p.pendingReturnKeys = (p.pendingReturnKeys + keys).take(500).toSet()
         p.heldKeys = emptySet()
     }
 

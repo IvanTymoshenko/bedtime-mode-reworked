@@ -37,6 +37,14 @@ class BedtimeListenerService : NotificationListenerService() {
             Log.i(TAG, "released $n/${keys.size} notifications")
         }
 
+        /** After "hide system notifications" is switched off mid-session, release those now. */
+        fun releaseSystem(ctx: Context) {
+            val svc = instance ?: return
+            val p = Prefs(ctx)
+            val keys = p.heldKeys.filter { svc.isSystemSource(History.pkgOf(it)) }.toSet()
+            if (keys.isNotEmpty()) releaseAll(ctx, keys)
+        }
+
         /** Hold everything currently in the shade (called on session start / resync). */
         fun holdAll(ctx: Context) {
             val svc = instance
@@ -109,12 +117,27 @@ class BedtimeListenerService : NotificationListenerService() {
         return when {
             sbn.packageName == packageName -> false
             sbn.packageName in p.allowedPackages -> false
+            !p.hideSystem && isSystemSource(sbn.packageName) -> false
             sbn.isOngoing -> false
             n.flags and Notification.FLAG_FOREGROUND_SERVICE != 0 -> false
             n.category == Notification.CATEGORY_CALL -> false
             n.category == Notification.CATEGORY_ALARM -> false
             else -> true
         }
+    }
+
+    private val systemCache = HashMap<String, Boolean>()
+
+    /**
+     * "System" = Android itself, System UI, or a preinstalled system package without a launcher
+     * icon (background services like battery, hotspot, USB). Preinstalled apps you open yourself
+     * (Gmail, Calendar…) count as normal apps.
+     */
+    fun isSystemSource(pkg: String): Boolean = systemCache.getOrPut(pkg) {
+        if (pkg == "android" || pkg == "com.android.systemui") return@getOrPut true
+        val info = runCatching { packageManager.getApplicationInfo(pkg, 0) }.getOrNull() ?: return@getOrPut false
+        val preinstalled = info.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM != 0
+        preinstalled && packageManager.getLaunchIntentForPackage(pkg) == null
     }
 
     /** Longest single snooze; manual "until off" sessions are released explicitly on stop. */
@@ -129,7 +152,10 @@ class BedtimeListenerService : NotificationListenerService() {
         return runCatching { snoozeNotification(sbn.key, duration) }
             .onSuccess {
                 val keys = p.heldKeys
-                if (sbn.key !in keys) p.heldKeys = keys + sbn.key
+                if (sbn.key !in keys) {
+                    p.heldKeys = keys + sbn.key
+                    HeldLog.add(this, sbn)
+                }
                 Log.i(TAG, "held ${sbn.packageName} (${sbn.key}) for ${duration / 1000}s")
             }
             .onFailure { Log.w(TAG, "snooze failed for ${sbn.key}", it) }
