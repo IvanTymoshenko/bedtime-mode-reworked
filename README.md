@@ -14,6 +14,11 @@
   &nbsp;·&nbsp; Android 10+ &nbsp;·&nbsp; Free &amp; open source &nbsp;·&nbsp; No ads, no tracking
 </p>
 
+<p align="center">
+  <a href="../../releases"><img src="https://img.shields.io/github/downloads/IvanTymoshenko/bedtime-mode-reworked/total?label=downloads&color=4c6ef5" alt="Total downloads"></a>
+  <a href="../../releases/latest"><img src="https://img.shields.io/github/v/release/IvanTymoshenko/bedtime-mode-reworked?label=latest" alt="Latest release"></a>
+</p>
+
 ---
 
 ## Why this exists
@@ -100,6 +105,15 @@ Android 10+ phone, not just OPPO.
   battery. The app works around this so bedtime starts and ends on the minute.
 - **Privacy:** the only network request is checking GitHub Releases for updates. Everything else
   stays on your phone.
+
+## Tested phones
+
+| Phone | OS | Status |
+| --- | --- | --- |
+| OPPO Find N6 | ColorOS 17 (Android 17) | ✅ Works |
+| OPPO Find X9 Ultra | ColorOS | ✅ Works |
+
+Tried it on another phone? [Open an issue](../../issues) with your model and OS version and it'll be added here.
 
 ## FAQ
 
