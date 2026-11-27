@@ -31,10 +31,10 @@ import kotlinx.coroutines.withContext
 
 /** Shows "Update available" with the release notes; downloads and installs in-app. */
 @Composable
-fun UpdateCard(forceCheck: Boolean, onShown: () -> Unit) {
+fun UpdateCard(forceCheck: Boolean, onShown: () -> Unit, refreshKey: Int = 0) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    var release by remember { mutableStateOf<Release?>(Updater.cached(ctx)) }
+    var release by remember(refreshKey) { mutableStateOf<Release?>(Updater.cached(ctx)) }
     var progress by remember { mutableStateOf<Float?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var needsPermission by remember { mutableStateOf(false) }
@@ -88,6 +88,51 @@ fun UpdateCard(forceCheck: Boolean, onShown: () -> Unit) {
                         .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
                 }) { Text("Details") }
             }
+        }
+    }
+}
+
+/** Settings section: version + manual "Check for updates". */
+@Composable
+fun AboutCard(onChecked: () -> Unit) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var status by remember { mutableStateOf<String?>(null) }
+    var checking by remember { mutableStateOf(false) }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("About & updates", style = MaterialTheme.typography.titleMedium)
+            Text("Version ${Updater.currentVersion}", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "The app checks for updates automatically and notifies you when a new version is out.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.FilledTonalButton(enabled = !checking, onClick = {
+                    checking = true
+                    status = "Checking…"
+                    scope.launch {
+                        val found = withContext(Dispatchers.IO) { Updater.fetchLatest() }
+                        val r = withContext(Dispatchers.IO) { Updater.checkNow(ctx) }
+                        status = when {
+                            r != null -> "Version ${r.version} is available — see the top of the screen."
+                            found != null -> "You're up to date."
+                            else -> "Couldn't reach GitHub. Check your internet connection."
+                        }
+                        checking = false
+                        onChecked()
+                    }
+                }) { Text("Check for updates") }
+                TextButton(onClick = {
+                    ctx.startActivity(
+                        android.content.Intent(android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://github.com/${app.bedtimemode.BuildConfig.GITHUB_REPO}"))
+                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
+                }) { Text("GitHub page") }
+            }
+            status?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
         }
     }
 }

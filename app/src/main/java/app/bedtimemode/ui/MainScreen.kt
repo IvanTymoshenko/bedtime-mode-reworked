@@ -111,6 +111,7 @@ fun MainScreen(showUpdate: Boolean = false, onUpdateShown: () -> Unit = {}) {
     var tick by remember { mutableIntStateOf(0) }
     var showApps by remember { mutableStateOf(false) }
     var showHeld by remember { mutableStateOf(false) }
+    var updateKey by remember { mutableIntStateOf(0) }
 
     DisposableEffect(Unit) {
         val l = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> tick++ }
@@ -134,7 +135,7 @@ fun MainScreen(showUpdate: Boolean = false, onUpdateShown: () -> Unit = {}) {
     Scaffold(topBar = { TopAppBar(title = { Text("Bedtime Mode") }) }) { pad ->
         BoxWithConstraints(Modifier.padding(pad).fillMaxSize()) {
             val status: @Composable () -> Unit = {
-                UpdateCard(forceCheck = showUpdate, onShown = onUpdateShown)
+                UpdateCard(forceCheck = showUpdate, onShown = onUpdateShown, refreshKey = updateKey)
                 StatusCard(s, ctx, onToggle = { Bedtime.toggle(ctx) })
                 HistoryCard(s, ctx, onShowHeld = { showHeld = true })
             }
@@ -142,11 +143,7 @@ fun MainScreen(showUpdate: Boolean = false, onUpdateShown: () -> Unit = {}) {
                 SetupCard(s, ctx)
                 ScheduleCard(s, ctx, prefs, changed)
                 OptionsCard(s, prefs, ctx, changed, onApps = { showApps = true })
-                Text(
-                    "Version ${app.bedtimemode.Updater.currentVersion}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                AboutCard(onChecked = { updateKey++ })
                 Text(
                     "Hidden notifications come back to the shade as soon as bedtime ends or you turn it off.",
                     style = MaterialTheme.typography.bodySmall,

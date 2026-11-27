@@ -132,6 +132,7 @@ object Bedtime {
         StatusNotification.update(app, st, p)
         BedtimeTileService.refresh(app)
         Updater.maybeCheckInBackground(app)
+        if (!st.active) Updater.notifyIfPending(app)
     }
 }
 

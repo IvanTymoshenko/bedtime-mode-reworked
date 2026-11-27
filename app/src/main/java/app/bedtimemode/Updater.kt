@@ -109,12 +109,21 @@ object Updater {
         if (System.currentTimeMillis() - p.lastUpdateCheck < CHECK_INTERVAL) return
         p.lastUpdateCheck = System.currentTimeMillis()
         thread(name = "update-check", isDaemon = true) {
-            val r = checkNow(app) ?: return@thread
-            if (p.notifiedVersion != r.version) {
-                p.notifiedVersion = r.version
-                notifyUpdate(app, r)
-            }
+            if (checkNow(app) != null) notifyIfPending(app)
         }
+    }
+
+    /**
+     * Post the "update available" notification once per version — but never during bedtime
+     * (it would be hidden); the next sync after bedtime ends posts it instead.
+     */
+    fun notifyIfPending(ctx: Context) {
+        val p = Prefs(ctx)
+        val r = cached(ctx) ?: return
+        if (p.notifiedVersion == r.version) return
+        if (Bedtime.evaluate(p).active) return
+        p.notifiedVersion = r.version
+        notifyUpdate(ctx, r)
     }
 
     private fun notifyUpdate(ctx: Context, r: Release) {
