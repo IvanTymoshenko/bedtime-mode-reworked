@@ -101,10 +101,10 @@ fun AboutCard(onChecked: () -> Unit) {
     var checking by remember { mutableStateOf(false) }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("About & updates", style = MaterialTheme.typography.titleMedium)
+            Text("About", style = MaterialTheme.typography.titleMedium)
             Text("Version ${Updater.currentVersion}", style = MaterialTheme.typography.bodyMedium)
             Text(
-                "The app checks for updates automatically and notifies you when a new version is out.",
+                "Updates are checked automatically.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

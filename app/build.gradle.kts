@@ -15,8 +15,8 @@ android {
         applicationId = "io.github.ivantymoshenko.bedtimemode"
         minSdk = 29
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.1.0"
+        versionCode = 4
+        versionName = "1.1.1"
         // GitHub repo used for in-app update checks (owner/name).
         buildConfigField("String", "GITHUB_REPO", "\"IvanTymoshenko/bedtime-mode-reworked\"")
     }

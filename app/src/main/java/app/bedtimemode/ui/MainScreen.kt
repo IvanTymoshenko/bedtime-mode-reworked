@@ -71,6 +71,8 @@ internal data class UiState(
     val allowCalls: Boolean,
     val hideExisting: Boolean,
     val hideSystem: Boolean,
+    val showStatusNotification: Boolean,
+    val showHiddenCount: Boolean,
     val allowedCount: Int,
     val heldApps: Map<String, Int>,
     val history: List<SessionRecord>,
@@ -88,6 +90,8 @@ internal fun readState(ctx: Context, p: Prefs) = UiState(
     allowCalls = p.allowCalls,
     hideExisting = p.hideExisting,
     hideSystem = p.hideSystem,
+    showStatusNotification = p.showStatusNotification,
+    showHiddenCount = p.showHiddenCount,
     allowedCount = p.allowedPackages.size,
     heldApps = History.appCounts(p.heldKeys),
     history = History.read(p),
@@ -130,9 +134,11 @@ fun MainScreen(showUpdate: Boolean = false, onUpdateShown: () -> Unit = {}) {
                 HistoryCard(s, ctx, onShowHeld = { showHeld = true }, onShowAll = { showHistory = true }, onSession = { sessionDetail = it })
             }
             val settings: @Composable () -> Unit = {
-                SetupCard(s, ctx)
+                if (!setupOk(s)) PermissionsCard(s, ctx)
                 ScheduleCard(s, ctx, prefs, changed)
-                OptionsCard(s, prefs, ctx, changed, onApps = { showApps = true })
+                SettingsSections(s, prefs, ctx, changed, onApps = { showApps = true })
+                LookCard(s, prefs, fancy = false)
+                if (setupOk(s)) PermissionsCard(s, ctx)
                 AboutCard(onChecked = { updateKey++ })
                 Text(
                     "Hidden notifications come back to the shade as soon as bedtime ends or you turn it off.",
@@ -141,7 +147,7 @@ fun MainScreen(showUpdate: Boolean = false, onUpdateShown: () -> Unit = {}) {
                 )
                 Spacer(Modifier.height(24.dp))
             }
-            if (maxWidth >= 720.dp) {
+            if (maxWidth >= 600.dp) {
                 // Landscape / unfolded: two independently scrolling columns.
                 Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Column(
@@ -239,61 +245,13 @@ private fun StatusCard(s: UiState, ctx: Context, onToggle: () -> Unit) {
     }
 }
 
-@Composable
-internal fun SetupCard(s: UiState, ctx: Context) {
-    val su = s.setup
-    if (su.listener && su.dnd && su.exactAlarm && su.battery && su.postNotifications && s.listenerConnected) {
-        SectionCard("Setup") {
-            Text("All permissions granted.", style = MaterialTheme.typography.bodyMedium)
-            BackgroundHint(ctx)
-        }
-        return
-    }
-    SectionCard("Setup needed") {
-        SetupRow("Notification access", "Required to hide notifications", su.listener) { Setup.openListenerSettings(ctx) }
-        if (su.listener && !s.listenerConnected) {
-            Text(
-                "Notification access is granted but the service isn't connected yet. Toggle the access off and on, or reboot.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        }
-        SetupRow("Do Not Disturb access", "Required to silence sound & vibration", su.dnd) { Setup.openDndSettings(ctx) }
-        SetupRow("Exact alarms", "Start and stop on time", su.exactAlarm) { Setup.openExactAlarmSettings(ctx) }
-        SetupRow("Show status notification", "\"Bedtime is on\" in the shade", su.postNotifications) { Setup.openAppNotificationSettings(ctx) }
-        SetupRow("Unrestricted battery", "Stops the system from killing the app", su.battery) { Setup.requestBatteryExemption(ctx) }
-        BackgroundHint(ctx)
-    }
-}
-
-@Composable
-private fun BackgroundHint(ctx: Context) {
-    Text(
-        "On ColorOS / OxygenOS: App info → Battery usage → \"Allow background activity\", and lock the app in Recent apps.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    TextButton(onClick = { Setup.openAppDetails(ctx) }) { Text("Open App info") }
-}
-
-@Composable
-private fun SetupRow(title: String, subtitle: String, ok: Boolean, onGrant: () -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text((if (ok) "✓ " else "✗ ") + title, style = MaterialTheme.typography.bodyLarge)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        if (!ok) FilledTonalButton(onClick = onGrant) { Text("Grant") }
-    }
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ScheduleCard(s: UiState, ctx: Context, p: Prefs, settingsChanged: () -> Unit) {
     // A new schedule replaces any manual on/off that was based on the old one.
     val changed = { p.clearOverride(); settingsChanged() }
     SectionCard("Schedule") {
-        SwitchRow("Use schedule", null, s.scheduleEnabled) { p.scheduleEnabled = it; changed() }
+        SwitchRow("Turn on automatically", null, s.scheduleEnabled) { p.scheduleEnabled = it; changed() }
         Row(Modifier.fillMaxWidth()) {
             TimeField("Starts", s.startMinute, Modifier.weight(1f)) { pickTime(ctx, s.startMinute) { m -> p.startMinute = m; changed() } }
             TimeField("Ends", s.endMinute, Modifier.weight(1f)) { pickTime(ctx, s.endMinute) { m -> p.endMinute = m; changed() } }
@@ -324,57 +282,6 @@ private fun TimeField(label: String, minute: Int, modifier: Modifier, onClick: (
 
 internal fun pickTime(ctx: Context, current: Int, onPicked: (Int) -> Unit) {
     TimePickerDialog(ctx, { _, h, m -> onPicked(h * 60 + m) }, current / 60, current % 60, true).show()
-}
-
-@Composable
-internal fun OptionsCard(s: UiState, p: Prefs, ctx: Context, changed: () -> Unit, onApps: () -> Unit) {
-    SectionCard("Options") {
-        SwitchRow("Silence with Do Not Disturb", "No sound, vibration or pop-ups. Alarms still ring.", s.useDnd) {
-            p.useDnd = it; changed()
-        }
-        SwitchRow("Let important calls through", "Starred contacts and repeat callers", s.allowCalls) {
-            p.allowCalls = it; Dnd.refreshRule(ctx); changed()
-        }
-        SwitchRow(
-            "Hide system notifications",
-            "From Android and background system services (hotspot, USB, battery warnings…). Ongoing status is never hidden.",
-            s.hideSystem,
-        ) {
-            p.hideSystem = it
-            if (!it) app.bedtimemode.BedtimeListenerService.releaseSystem(ctx)
-            changed()
-        }
-        SwitchRow("Hide existing notifications", "Also clear what's already in the shade when bedtime starts", s.hideExisting) {
-            p.hideExisting = it; changed()
-        }
-        Row(
-            Modifier.fillMaxWidth().clickable(onClick = onApps).padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text("Allowed apps", style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    if (s.allowedCount == 0) "None — everything is held" else "${s.allowedCount} app(s) can still show notifications",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Text("›", style = MaterialTheme.typography.headlineSmall)
-        }
-    }
-}
-
-@Composable
-internal fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f).padding(end = 12.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            if (subtitle != null) {
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        Switch(checked = checked, onCheckedChange = onChange)
-    }
 }
 
 @Composable

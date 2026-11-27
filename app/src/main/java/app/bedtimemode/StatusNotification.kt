@@ -35,7 +35,7 @@ object StatusNotification {
 
     fun update(ctx: Context, st: Status, p: Prefs) {
         val nm = ctx.getSystemService(NotificationManager::class.java)
-        if (!st.active) {
+        if (!st.active || !p.showStatusNotification) {
             nm.cancel(ID)
             return
         }
@@ -46,7 +46,7 @@ object StatusNotification {
         val until = st.endsAt
         val text = buildString {
             append(if (until == null || until == Long.MAX_VALUE) "Hiding notifications until you turn it off" else "Hiding notifications until ${Format.time(until)}")
-            append(" · $held hidden")
+            if (p.showHiddenCount) append(" · $held hidden")
         }
         val open = PendingIntent.getActivity(
             ctx, 0, Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),

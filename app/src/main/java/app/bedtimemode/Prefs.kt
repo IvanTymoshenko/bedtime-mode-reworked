@@ -52,6 +52,16 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("hide_system", true)
         set(v) = sp.edit { putBoolean("hide_system", v) }
 
+    /** Show the ongoing "Bedtime is on" notification while active. */
+    var showStatusNotification: Boolean
+        get() = sp.getBoolean("show_status_notification", true)
+        set(v) = sp.edit { putBoolean("show_status_notification", v) }
+
+    /** Add "· N hidden" to the status notification. Off by default (ColorOS 16 didn't show it). */
+    var showHiddenCount: Boolean
+        get() = sp.getBoolean("show_hidden_count", false)
+        set(v) = sp.edit { putBoolean("show_hidden_count", v) }
+
     var allowedPackages: Set<String>
         get() = sp.getStringSet("allowed_packages", emptySet())!!.toSet()
         set(v) = sp.edit { putStringSet("allowed_packages", v) }

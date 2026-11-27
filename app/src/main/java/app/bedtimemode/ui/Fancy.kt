@@ -119,7 +119,7 @@ val Accents = listOf(
 
 fun accentById(id: String?): Accent = Accents.firstOrNull { it.id == id } ?: Accents.first()
 
-private val LocalAccent = staticCompositionLocalOf { Accents.first() }
+internal val LocalAccent = staticCompositionLocalOf { Accents.first() }
 
 @Composable
 fun FancyTheme(accentId: String?, content: @Composable () -> Unit) {
@@ -159,12 +159,11 @@ fun FancyScreen(showUpdate: Boolean = false, onUpdateShown: () -> Unit = {}) {
     // A new schedule replaces any manual on/off that was based on the old one.
     val scheduleChanged: () -> Unit = { prefs.clearOverride(); changed() }
 
-    val setupOk = s.setup.let { it.listener && it.dnd && it.exactAlarm && it.battery && it.postNotifications } &&
-        s.listenerConnected
+    val setupOk = setupOk(s)
 
     Surface(Modifier.fillMaxSize(), color = F.bg, contentColor = F.text) {
         BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding()) {
-            val wide = maxWidth >= 720.dp
+            val wide = maxWidth >= 600.dp
             val header: @Composable () -> Unit = {
                 Row(
                     Modifier.fillMaxWidth().height(56.dp).padding(start = 4.dp),
@@ -199,8 +198,8 @@ fun FancyScreen(showUpdate: Boolean = false, onUpdateShown: () -> Unit = {}) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     HeldTile(s, ctx, Modifier.weight(1f)) { showHeld = true }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ToggleTile("Do Not Disturb", s.useDnd) { prefs.useDnd = it; changed() }
-                        ToggleTile("Starred calls", s.allowCalls) { prefs.allowCalls = it; Dnd.refreshRule(ctx); changed() }
+                        ToggleTile("Mute sounds", s.useDnd) { prefs.useDnd = it; changed() }
+                        ToggleTile("Let calls through", s.allowCalls) { prefs.allowCalls = it; Dnd.refreshRule(ctx); changed() }
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -209,12 +208,12 @@ fun FancyScreen(showUpdate: Boolean = false, onUpdateShown: () -> Unit = {}) {
                         if (!it) BedtimeListenerService.releaseSystem(ctx)
                         changed()
                     }
-                    ToggleTile("Hide existing", s.hideExisting, Modifier.weight(1f)) { prefs.hideExisting = it; changed() }
+                    ToggleTile("Hide what's there", s.hideExisting, Modifier.weight(1f)) { prefs.hideExisting = it; changed() }
                 }
                 HistoryTile(s, onSession = { sessionDetail = it }, onShowAll = { showHistory = true })
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     InfoTile(
-                        "Always visible",
+                        "Can still notify",
                         if (s.allowedCount == 0) "None" else "${s.allowedCount} app${if (s.allowedCount == 1) "" else "s"}",
                         Modifier.weight(1f),
                     ) { showApps = true }
@@ -589,7 +588,7 @@ private fun ScheduleDial(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AccentPicker(selected: String, onPick: (String) -> Unit) {
+internal fun AccentPicker(selected: String, onPick: (String) -> Unit) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         for (a in Accents) {
             val on = a.id == selected
@@ -622,28 +621,36 @@ private fun FancySettings(s: UiState, p: Prefs, onChecked: () -> Unit, onApps: (
                     Text("Settings", fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(start = 4.dp))
                     TextButton(onClick = onDismiss) { Text("Close") }
                 }
-                Column(
-                    Modifier.fillMaxWidth().widthIn(max = 720.dp).align(Alignment.CenterHorizontally)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    SectionCard("Look") {
-                        SwitchRow("Fancy look", "Turn off for the classic, simple screen", true) {
-                            if (!it) { p.fancyUi = false; onDismiss() }
-                        }
-                        Text("Colour", fontSize = 15.sp, modifier = Modifier.padding(top = 4.dp))
-                        AccentPicker(selected = LocalAccent.current.id) { p.fancyAccent = it }
-                    }
+                val left: @Composable () -> Unit = {
+                    if (!setupOk(s)) PermissionsCard(s, ctx)
+                    LookCard(s, p, fancy = true, onClassic = onDismiss)
                     SectionCard("Schedule") {
-                        SwitchRow("Use schedule", "Turn bedtime on and off automatically", s.scheduleEnabled) {
+                        SwitchRow("Turn on automatically", "Uses your bedtime and wake-up times", s.scheduleEnabled) {
                             p.scheduleEnabled = it; p.clearOverride(); changed()
                         }
-                        TextButton(onClick = { Setup.requestAddTile(ctx) }) { Text("Add Quick Settings tile") }
+                        TextButton(onClick = { Setup.requestAddTile(ctx) }) { Text("Add to Quick Settings") }
                     }
-                    SetupCard(s, ctx)
-                    OptionsCard(s, p, ctx, changed, onApps = onApps)
+                    SoundCard(s, p, ctx, changed)
+                }
+                val right: @Composable () -> Unit = {
+                    HideCard(s, p, ctx, changed, onApps)
+                    NoticeCard(s, p, changed)
+                    if (setupOk(s)) PermissionsCard(s, ctx)
                     AboutCard(onChecked = onChecked)
                     Spacer(Modifier.height(24.dp))
+                }
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val gap = Arrangement.spacedBy(12.dp)
+                    if (maxWidth >= 600.dp) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = gap) { left() }
+                            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = gap) { right() }
+                        }
+                    } else {
+                        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = gap) {
+                            left(); right()
+                        }
+                    }
                 }
             }
         }
