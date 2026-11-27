@@ -59,7 +59,7 @@ import java.time.DayOfWeek
 import java.time.format.TextStyle
 import java.util.Locale
 
-private data class UiState(
+internal data class UiState(
     val status: Status,
     val setup: SetupState,
     val listenerConnected: Boolean,
@@ -76,7 +76,7 @@ private data class UiState(
     val history: List<SessionRecord>,
 )
 
-private fun readState(ctx: Context, p: Prefs) = UiState(
+internal fun readState(ctx: Context, p: Prefs) = UiState(
     status = Bedtime.evaluate(p),
     setup = Setup.state(ctx),
     listenerConnected = BedtimeListenerService.isConnected,
@@ -93,14 +93,14 @@ private fun readState(ctx: Context, p: Prefs) = UiState(
     history = History.read(p),
 )
 
-private fun appLabel(ctx: Context, pkg: String): String = when (pkg) {
+internal fun appLabel(ctx: Context, pkg: String): String = when (pkg) {
     "com.android.shell" -> "Test (adb)"
     else -> runCatching {
         ctx.packageManager.getApplicationLabel(ctx.packageManager.getApplicationInfo(pkg, 0)).toString()
     }.getOrDefault(pkg)
 }
 
-private fun appsSummary(ctx: Context, apps: Map<String, Int>): String =
+internal fun appsSummary(ctx: Context, apps: Map<String, Int>): String =
     apps.entries.joinToString(" · ") { "${appLabel(ctx, it.key)} ${it.value}" }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -108,36 +108,26 @@ private fun appsSummary(ctx: Context, apps: Map<String, Int>): String =
 fun MainScreen(showUpdate: Boolean = false, onUpdateShown: () -> Unit = {}) {
     val ctx = LocalContext.current
     val prefs = remember { Prefs(ctx) }
-    var tick by remember { mutableIntStateOf(0) }
     var showApps by remember { mutableStateOf(false) }
     var showHeld by remember { mutableStateOf(false) }
+    var showHistory by remember { mutableStateOf(false) }
+    var sessionDetail by remember { mutableStateOf<SessionRecord?>(null) }
     var updateKey by remember { mutableIntStateOf(0) }
 
-    DisposableEffect(Unit) {
-        val l = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> tick++ }
-        prefs.sp.registerOnSharedPreferenceChangeListener(l)
-        onDispose { prefs.sp.unregisterOnSharedPreferenceChangeListener(l) }
-    }
-    LifecycleResumeEffect(Unit) {
-        Bedtime.sync(ctx, "app-resume")
-        tick++
-        onPauseOrDispose { }
-    }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(30_000); tick++
-        }
-    }
-
-    val s = remember(tick) { readState(ctx, prefs) }
+    val s = rememberUiState(prefs)
     val changed: () -> Unit = { Bedtime.sync(ctx, "settings") }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Bedtime Mode Reworked") }) }) { pad ->
+    Scaffold(topBar = {
+        TopAppBar(
+            title = { Text("Bedtime Mode Reworked") },
+            actions = { TextButton(onClick = { prefs.fancyUi = true }) { Text("Fancy look") } },
+        )
+    }) { pad ->
         BoxWithConstraints(Modifier.padding(pad).fillMaxSize()) {
             val status: @Composable () -> Unit = {
                 UpdateCard(forceCheck = showUpdate, onShown = onUpdateShown, refreshKey = updateKey)
                 StatusCard(s, ctx, onToggle = { Bedtime.toggle(ctx) })
-                HistoryCard(s, ctx, onShowHeld = { showHeld = true })
+                HistoryCard(s, ctx, onShowHeld = { showHeld = true }, onShowAll = { showHistory = true }, onSession = { sessionDetail = it })
             }
             val settings: @Composable () -> Unit = {
                 SetupCard(s, ctx)
@@ -176,11 +166,36 @@ fun MainScreen(showUpdate: Boolean = false, onUpdateShown: () -> Unit = {}) {
     }
 
     if (showHeld) HeldLogDialog(onDismiss = { showHeld = false })
+    if (showHistory) HistoryDialog(s.history, onSession = { sessionDetail = it }, onDismiss = { showHistory = false })
+    sessionDetail?.let { SessionDetailDialog(it, onDismiss = { sessionDetail = null }) }
     if (showApps) AllowedAppsDialog(prefs, onDismiss = { showApps = false; changed() })
 }
 
+/** Live [UiState]: re-read on any pref change, on resume (after a sync) and every 30 s. */
 @Composable
-private fun SectionCard(title: String, content: @Composable () -> Unit) {
+internal fun rememberUiState(prefs: Prefs): UiState {
+    val ctx = LocalContext.current
+    var tick by remember { mutableIntStateOf(0) }
+    DisposableEffect(Unit) {
+        val l = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> tick++ }
+        prefs.sp.registerOnSharedPreferenceChangeListener(l)
+        onDispose { prefs.sp.unregisterOnSharedPreferenceChangeListener(l) }
+    }
+    LifecycleResumeEffect(Unit) {
+        Bedtime.sync(ctx, "app-resume")
+        tick++
+        onPauseOrDispose { }
+    }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000); tick++
+        }
+    }
+    return remember(tick) { readState(ctx, prefs) }
+}
+
+@Composable
+internal fun SectionCard(title: String, content: @Composable () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
@@ -225,7 +240,7 @@ private fun StatusCard(s: UiState, ctx: Context, onToggle: () -> Unit) {
 }
 
 @Composable
-private fun SetupCard(s: UiState, ctx: Context) {
+internal fun SetupCard(s: UiState, ctx: Context) {
     val su = s.setup
     if (su.listener && su.dnd && su.exactAlarm && su.battery && su.postNotifications && s.listenerConnected) {
         SectionCard("Setup") {
@@ -307,12 +322,12 @@ private fun TimeField(label: String, minute: Int, modifier: Modifier, onClick: (
     }
 }
 
-private fun pickTime(ctx: Context, current: Int, onPicked: (Int) -> Unit) {
+internal fun pickTime(ctx: Context, current: Int, onPicked: (Int) -> Unit) {
     TimePickerDialog(ctx, { _, h, m -> onPicked(h * 60 + m) }, current / 60, current % 60, true).show()
 }
 
 @Composable
-private fun OptionsCard(s: UiState, p: Prefs, ctx: Context, changed: () -> Unit, onApps: () -> Unit) {
+internal fun OptionsCard(s: UiState, p: Prefs, ctx: Context, changed: () -> Unit, onApps: () -> Unit) {
     SectionCard("Options") {
         SwitchRow("Silence with Do Not Disturb", "No sound, vibration or pop-ups. Alarms still ring.", s.useDnd) {
             p.useDnd = it; changed()
@@ -350,7 +365,7 @@ private fun OptionsCard(s: UiState, p: Prefs, ctx: Context, changed: () -> Unit,
 }
 
 @Composable
-private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
+internal fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f).padding(end = 12.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
@@ -363,7 +378,13 @@ private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChan
 }
 
 @Composable
-private fun HistoryCard(s: UiState, ctx: Context, onShowHeld: () -> Unit) {
+private fun HistoryCard(
+    s: UiState,
+    ctx: Context,
+    onShowHeld: () -> Unit,
+    onShowAll: () -> Unit,
+    onSession: (SessionRecord) -> Unit,
+) {
     SectionCard("History") {
         FilledTonalButton(onClick = onShowHeld) { Text("See everything that was hidden") }
         if (s.history.isEmpty()) {
@@ -373,22 +394,11 @@ private fun HistoryCard(s: UiState, ctx: Context, onShowHeld: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        for (r in s.history.take(7)) {
-            Column(Modifier.padding(vertical = 4.dp)) {
-                Text(
-                    "${Format.dayTime(r.start)} → ${Format.dayTime(r.end)}",
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                val back = if (r.held == 0) "" else " · ${r.returned} of ${r.held} back in shade"
-                Text("${r.held} hidden$back", style = MaterialTheme.typography.bodyMedium)
-                if (r.apps.isNotEmpty()) {
-                    Text(
-                        appsSummary(ctx, r.apps),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+        for (r in s.history.take(HISTORY_PREVIEW)) SessionRow(ctx, r, onClick = { onSession(r) })
+        if (s.history.size > HISTORY_PREVIEW) {
+            TextButton(onClick = onShowAll) { Text("Show all (${s.history.size})") }
         }
     }
 }
+
+private const val HISTORY_PREVIEW = 3

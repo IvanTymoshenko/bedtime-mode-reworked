@@ -1,5 +1,12 @@
 # Changelog — Bedtime Mode Reworked
 
+## 1.1.0
+- New "Fancy" look: a 24-hour dial you drag to set bedtime and wake-up, with everything in big rounded tiles
+- Pick one of 8 colours for the Fancy look (Blue, Amber, Coral, Rose, Green, Teal, Lime, Silver)
+- Switch between Fancy and Classic anytime ("Fancy look" at the top of Classic, Settings → Look in Fancy)
+- History shows the last 3 nights, with "Show all" for the full list
+- Tap a night in History to see how many notifications each app had
+
 ## 1.0.1
 - "Check for updates" now contacts GitHub once per tap and shows which version you have
 

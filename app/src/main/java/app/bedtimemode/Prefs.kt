@@ -101,6 +101,16 @@ class Prefs(context: Context) {
         get() = sp.getString("history", "[]")!!
         set(v) = sp.edit { putString("history", v) }
 
+    /** Main screen look: false = classic Material cards, true = "fancy" dial + tiles. */
+    var fancyUi: Boolean
+        get() = sp.getBoolean("fancy_ui", false)
+        set(v) = sp.edit { putBoolean("fancy_ui", v) }
+
+    /** Accent colour id for the Fancy look (see ui/Fancy.kt `Accents`); null = default (blue). */
+    var fancyAccent: String?
+        get() = sp.getString("fancy_accent", null)
+        set(v) = sp.edit { putString("fancy_accent", v) }
+
     // --- Onboarding / updates ---
     var onboardingDone: Boolean
         get() = sp.getBoolean("onboarding_done", false)

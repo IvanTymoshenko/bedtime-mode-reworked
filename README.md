@@ -58,8 +58,34 @@ Android 10+ phone, not just OPPO.
 - 📜 **History**: what was hidden each night, by app, and how much came back. The app also keeps
   its own on-device copy of everything it hid for 7 days, so you can never miss anything.
 - ✅ **Allowed apps** that are never hidden, plus an option to hide or show system notifications.
+- 🎨 **Two looks.** *Fancy*: a dark screen with a 24-hour dial you drag to set your bedtime,
+  everything in big rounded tiles, and 8 accent colours to choose from. *Classic*: simple Material
+  cards. Switch any time.
 - 🔄 **In-app updates.** The app tells you when a new version is out, shows what changed, and
   updates itself, so you don't need to come back here.
+
+### Fancy look
+
+<p align="center">
+  <img src="docs/screenshots/fancy-phone.png" width="270" alt="Fancy look on a phone: schedule dial showing 'Sleeping until 08:00' and a Turn off button">
+  &nbsp;
+  <img src="docs/screenshots/fancy-phone-tiles.png" width="270" alt="Fancy look on a phone: tiles for days, held notifications, Do Not Disturb, starred calls and last nights">
+  &nbsp;
+  <img src="docs/screenshots/fancy-colours.png" width="270" alt="Fancy look settings: pick one of 8 accent colours">
+  <br><sub>On a phone (or a foldable's cover screen). Pick from 8 colours: Blue, Amber, Coral, Rose, Green, Teal, Lime, Silver.</sub>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/fancy-unfolded.png" width="720" alt="Fancy look: 24-hour schedule dial showing 'Sleeping until 08:00', a Turn off button, and tiles for held notifications, Do Not Disturb, starred calls and recent nights">
+  <br><sub>Unfolded / tablet / landscape: two columns (shown in Amber). Drag the moon (bedtime) or the dot (wake up) around the dial.</sub>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/fancy-settings.png" width="360" alt="Fancy look settings page">
+  &nbsp;
+  <img src="docs/screenshots/classic-unfolded.png" width="360" alt="Classic look with Material cards">
+  <br><sub>Settings page (left), with the switch between Fancy and Classic. The Classic look (right).</sub>
+</p>
 
 <p align="center">
   <img src="docs/screenshots/quick-settings-tile.png" width="320" alt="Quick Settings panel with the Bedtime tile">
