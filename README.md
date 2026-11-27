@@ -39,9 +39,9 @@ Updates install from inside the app — no need to come back here.
 
 ## How it works
 
-- Notifications are hidden with Android's own **snooze** feature (via notification access). They are
-  snoozed in 10-minute chunks while bedtime lasts, so if you turn bedtime off early they come back
-  within ~10 minutes; at the scheduled end they come back right on time.
+- Notifications are hidden with Android's own **snooze** feature (via notification access) until
+  bedtime ends. When it ends — on schedule or because you turned it off — they come back to the
+  shade immediately (released while still silent, so they don't all buzz at once).
 - Silence comes from the app's own **Do Not Disturb rule** ("Bedtime Mode" in your DND settings —
   keep it enabled). Your other DND settings are never touched.
 - Ongoing notifications (music, navigation, calls, downloads) and alarms are never hidden.

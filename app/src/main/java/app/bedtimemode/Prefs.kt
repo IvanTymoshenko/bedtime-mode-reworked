@@ -96,10 +96,6 @@ class Prefs(context: Context) {
         get() = sp.getString("history", "[]")!!
         set(v) = sp.edit { putString("history", v) }
 
-    /** Snooze chunk length while DND silences. Hidden/debug-tunable; default 10 min. */
-    val chunkMs: Long
-        get() = sp.getLong("chunk_ms", 10 * 60_000L)
-
     // --- Onboarding / updates ---
     var onboardingDone: Boolean
         get() = sp.getBoolean("onboarding_done", false)

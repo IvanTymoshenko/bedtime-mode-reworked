@@ -6,6 +6,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import java.time.Instant
 import java.time.ZoneId
@@ -94,9 +96,6 @@ object Bedtime {
         if (evaluate(Prefs(ctx)).active) stopNow(ctx) else startNow(ctx)
     }
 
-    /** Whether our DND rule is actually silencing right now (affects how we chunk snoozes). */
-    fun dndSilencing(ctx: Context, p: Prefs) = p.useDnd && Dnd.hasAccess(ctx)
-
     @Synchronized
     fun sync(ctx: Context, reason: String) {
         val app = ctx.applicationContext
@@ -107,7 +106,8 @@ object Bedtime {
         val st = evaluate(p, now)
         Log.i(TAG, "sync($reason): $st wasActive=${p.appliedActive}")
 
-        Dnd.apply(app, st.active && p.useDnd)
+        val ending = !st.active && p.appliedActive
+        if (!ending) Dnd.apply(app, st.active && p.useDnd)
 
         if (st.active) {
             if (!p.appliedActive) {
@@ -118,9 +118,15 @@ object Bedtime {
             }
             p.sessionEndsAt = st.endsAt ?: 0L
             BedtimeListenerService.holdAll(app)
-        } else if (p.appliedActive) {
+        } else if (ending) {
             History.finishSession(p, now)
             p.appliedActive = false
+            // Release held notifications while DND is still on, so they come back silently,
+            // then lift DND a few seconds later.
+            BedtimeListenerService.releaseAll(app, p.pendingReturnKeys)
+            Handler(Looper.getMainLooper()).postDelayed({
+                if (!evaluate(Prefs(app)).active) Dnd.apply(app, false)
+            }, 4_000)
         }
 
         Alarms.schedule(app, st.nextChangeAt)

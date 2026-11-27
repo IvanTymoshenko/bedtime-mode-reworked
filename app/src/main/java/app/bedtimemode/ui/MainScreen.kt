@@ -145,8 +145,7 @@ fun MainScreen(showUpdate: Boolean = false, onUpdateShown: () -> Unit = {}) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    "Hidden notifications come back to the shade when bedtime ends. If you turn it " +
-                        "off early, they return within about 10 minutes.",
+                    "Hidden notifications come back to the shade as soon as bedtime ends or you turn it off.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

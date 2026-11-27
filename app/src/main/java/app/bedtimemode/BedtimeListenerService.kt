@@ -22,6 +22,21 @@ class BedtimeListenerService : NotificationListenerService() {
 
         fun component(ctx: Context) = ComponentName(ctx, BedtimeListenerService::class.java)
 
+        /**
+         * Bring held notifications back right now (bedtime turned off early). Android has no
+         * public "unsnooze", but re-snoozing a snoozed notification for ~1 s replaces its timer,
+         * so it returns to the shade almost immediately.
+         */
+        fun releaseAll(ctx: Context, keys: Set<String>) {
+            val svc = instance ?: run { Log.w(TAG, "release: listener not connected"); return }
+            var n = 0
+            for (k in keys) {
+                runCatching { svc.snoozeNotification(k, 1_000) }.onSuccess { n++ }
+                    .onFailure { Log.w(TAG, "release failed for $k: ${it.message}") }
+            }
+            Log.i(TAG, "released $n/${keys.size} notifications")
+        }
+
         /** Hold everything currently in the shade (called on session start / resync). */
         fun holdAll(ctx: Context) {
             val svc = instance
@@ -102,21 +117,15 @@ class BedtimeListenerService : NotificationListenerService() {
         }
     }
 
-    /**
-     * Snooze in chunks rather than all the way to the end: a notification that comes back while
-     * bedtime is still on is simply snoozed again. This means that if bedtime is turned off
-     * early, everything returns within one chunk (Android has no public "unsnooze" for apps).
-     * Chunks are short only while DND is silencing, so re-posts can never make a sound.
-     */
-    private fun chunkMs(p: Prefs): Long =
-        if (Bedtime.dndSilencing(this, p)) p.chunkMs else 6 * 60 * 60_000L
+    /** Longest single snooze; manual "until off" sessions are released explicitly on stop. */
+    private val maxSnoozeMs = 7L * 24 * 60 * 60_000
 
     /** @return true if the notification was snoozed. */
     private fun hold(sbn: StatusBarNotification, endsAt: Long, p: Prefs): Boolean {
         if (!shouldHold(sbn, p)) return false
         val remaining = endsAt - System.currentTimeMillis()
         if (remaining < 5_000) return false
-        val duration = minOf(remaining, chunkMs(p))
+        val duration = minOf(remaining, maxSnoozeMs)
         return runCatching { snoozeNotification(sbn.key, duration) }
             .onSuccess {
                 val keys = p.heldKeys
