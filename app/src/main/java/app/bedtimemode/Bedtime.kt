@@ -107,7 +107,7 @@ object Bedtime {
         Log.i(TAG, "sync($reason): $st wasActive=${p.appliedActive}")
 
         val ending = !st.active && p.appliedActive
-        if (!ending) Dnd.apply(app, st.active && p.useDnd)
+        if (!ending) Dnd.apply(app, st.active && p.useDnd, Dnd.wantsGrey(p, st))
 
         if (st.active) {
             if (!p.appliedActive) {
@@ -124,7 +124,7 @@ object Bedtime {
             // then lift DND a few seconds later.
             BedtimeListenerService.releaseAll(app, p.pendingReturnKeys)
             Handler(Looper.getMainLooper()).postDelayed({
-                if (!evaluate(Prefs(app)).active) Dnd.apply(app, false)
+                if (!evaluate(Prefs(app)).active) Dnd.apply(app, false, false)
             }, 4_000)
         }
 

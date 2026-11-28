@@ -51,6 +51,9 @@ Android 10+ phone, not just OPPO.
   from starred contacts and repeat callers through.
 - ☀️ **Gives everything back.** When bedtime ends (or when you turn it off), every hidden
   notification returns to the shade, untouched, with its buttons and actions still working.
+- 🌑 **Black & white screen** (Android 15+). Turns the screen grey during bedtime so it's less
+  tempting to scroll. Choose separately for scheduled bedtime and for turning it on by hand. No
+  extra permissions; colour comes back when bedtime ends.
 - ⏰ **Schedule** with start/end time and the days of the week.
 - ⚡ **Quick Settings tile** to turn bedtime on or off anytime, regardless of the schedule.
   Turning it back on resumes tonight's schedule and ends at the usual time.

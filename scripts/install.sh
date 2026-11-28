@@ -9,6 +9,7 @@ PKG=io.github.ivantymoshenko.bedtimemode
 SVC=app.bedtimemode.BedtimeListenerService
 
 if [ "${1:-}" = "--debug" ]; then
+  PKG="$PKG.debug"
   ./gradlew assembleDebug --console=plain -q; APK=app/build/outputs/apk/debug/app-debug.apk
 else
   ./gradlew assembleRelease --console=plain -q; APK=app/build/outputs/apk/release/app-release.apk

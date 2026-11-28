@@ -88,6 +88,7 @@ object Updater {
     /** Store [r] as the available update if it's newer; returns it, or null when up to date. */
     fun remember(ctx: Context, r: Release): Release? {
         val p = Prefs(ctx)
+        if (BuildConfig.DEBUG) return null
         if (isNewer(r.version)) {
             p.availableUpdateJson = JSONObject()
                 .put("version", r.version).put("notes", r.notes)
@@ -110,6 +111,7 @@ object Updater {
     fun maybeCheckInBackground(ctx: Context) {
         val app = ctx.applicationContext
         val p = Prefs(app)
+        if (BuildConfig.DEBUG) return // the debug app must never "update" to a release
         if (System.currentTimeMillis() - p.lastUpdateCheck < CHECK_INTERVAL) return
         p.lastUpdateCheck = System.currentTimeMillis()
         thread(name = "update-check", isDaemon = true) {

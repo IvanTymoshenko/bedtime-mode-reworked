@@ -2,6 +2,8 @@ package app.bedtimemode
 
 import android.app.AutomaticZenRule
 import android.app.NotificationManager
+import android.os.Build
+import android.service.notification.ZenDeviceEffects
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
@@ -15,25 +17,39 @@ import android.util.Log
  * leaves everything as it was. This only silences; hiding from the shade is the listener's job.
  */
 object Dnd {
-    private const val RULE_NAME = "Bedtime Mode Reworked"
+    private fun ruleName(ctx: Context) = ctx.getString(R.string.app_name)
     private fun nm(ctx: Context) = ctx.getSystemService(NotificationManager::class.java)
 
     fun hasAccess(ctx: Context) = nm(ctx).isNotificationPolicyAccessGranted
 
     private fun conditionUri(ctx: Context): Uri = Uri.parse("condition://${ctx.packageName}/bedtime")
 
-    private fun buildRule(ctx: Context): AutomaticZenRule {
+    /** Black & white screen is a rule "device effect" (Android 15+), no extra permission. */
+    val greySupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM
+
+    /** Whether the screen should be grey for the session described by [st]. */
+    fun wantsGrey(p: Prefs, st: Status) = st.active && (if (st.manual) p.greyOnManual else p.greyOnSchedule)
+
+    /**
+     * [mute] false (sound option off) but [grey] true: the rule still has to be active to turn the
+     * screen grey, so it then lets every sound and visual through.
+     */
+    private fun buildRule(ctx: Context, mute: Boolean = true, grey: Boolean = false): AutomaticZenRule {
         val p = Prefs(ctx)
-        val policy = ZenPolicy.Builder()
-            .disallowAllSounds()
-            .allowAlarms(true)
-            .allowCalls(if (p.allowCalls) ZenPolicy.PEOPLE_TYPE_STARRED else ZenPolicy.PEOPLE_TYPE_NONE)
-            .allowRepeatCallers(p.allowCalls)
-            .hideAllVisualEffects()
-            .build()
+        val policy = if (mute) {
+            ZenPolicy.Builder()
+                .disallowAllSounds()
+                .allowAlarms(true)
+                .allowCalls(if (p.allowCalls) ZenPolicy.PEOPLE_TYPE_STARRED else ZenPolicy.PEOPLE_TYPE_NONE)
+                .allowRepeatCallers(p.allowCalls)
+                .hideAllVisualEffects()
+                .build()
+        } else {
+            ZenPolicy.Builder().allowAllSounds().showAllVisualEffects().build()
+        }
         @Suppress("DEPRECATION")
-        return AutomaticZenRule(
-            RULE_NAME,
+        val rule = AutomaticZenRule(
+            ruleName(ctx),
             null,
             ComponentName(ctx, MainActivity::class.java),
             conditionUri(ctx),
@@ -41,7 +57,14 @@ object Dnd {
             NotificationManager.INTERRUPTION_FILTER_PRIORITY,
             true,
         )
+        if (greySupported) {
+            rule.deviceEffects = ZenDeviceEffects.Builder().setShouldDisplayGrayscale(grey).build()
+        }
+        return rule
     }
+
+    /** What the rule was last built with, so [apply] only rebuilds it on change. */
+    private var lastBuilt: Pair<Boolean, Boolean>? = null
 
     private fun ensureRule(ctx: Context): String {
         val p = Prefs(ctx)
@@ -50,7 +73,7 @@ object Dnd {
             val existing = nm.getAutomaticZenRule(id)
             if (existing != null) {
                 // Keep the rule's visible name in sync after a rename.
-                if (existing.name != RULE_NAME) runCatching { nm.updateAutomaticZenRule(id, buildRule(ctx)) }
+                if (existing.name != ruleName(ctx)) runCatching { nm.updateAutomaticZenRule(id, buildRule(ctx)) }
                 return id
             }
         }
@@ -62,18 +85,26 @@ object Dnd {
 
     /** Re-apply rule settings after the user changes options. */
     fun refreshRule(ctx: Context) {
-        if (!hasAccess(ctx)) return
-        runCatching { nm(ctx).updateAutomaticZenRule(ensureRule(ctx), buildRule(ctx)) }
-            .onFailure { Log.w(TAG, "dnd: update failed", it) }
+        lastBuilt = null
+        Bedtime.sync(ctx, "rule-changed")
     }
 
-    fun apply(ctx: Context, on: Boolean) {
+    /** [mute] silences; [grey] turns the screen black & white. Rule is active if either is on. */
+    fun apply(ctx: Context, mute: Boolean, grey: Boolean) {
+        val on = mute || grey
         if (!hasAccess(ctx)) {
             if (on) Log.w(TAG, "dnd: no policy access, cannot silence")
             return
         }
         runCatching {
             val id = ensureRule(ctx)
+            // Effects only matter while on; when off keep the last build so nothing flips mid-release.
+            val want = if (on) mute to grey else lastBuilt ?: (true to false)
+            if (lastBuilt != want) {
+                nm(ctx).updateAutomaticZenRule(id, buildRule(ctx, want.first, want.second))
+                lastBuilt = want
+                Log.i(TAG, "dnd: rule rebuilt mute=${want.first} grey=${want.second}")
+            }
             val state = if (on) Condition.STATE_TRUE else Condition.STATE_FALSE
             nm(ctx).setAutomaticZenRuleState(id, Condition(conditionUri(ctx), if (on) "Bedtime" else "Off", state))
             Log.i(TAG, "dnd: rule $id -> ${if (on) "ON" else "OFF"}")

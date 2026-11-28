@@ -631,24 +631,26 @@ private fun FancySettings(s: UiState, p: Prefs, onChecked: () -> Unit, onApps: (
                         TextButton(onClick = { Setup.requestAddTile(ctx) }) { Text("Add to Quick Settings") }
                     }
                     SoundCard(s, p, ctx, changed)
+                    ScreenCard(s, p, ctx)
                 }
                 val right: @Composable () -> Unit = {
                     HideCard(s, p, ctx, changed, onApps)
                     NoticeCard(s, p, changed)
                     if (setupOk(s)) PermissionsCard(s, ctx)
                     AboutCard(onChecked = onChecked)
-                    Spacer(Modifier.height(24.dp))
                 }
+                // Room under the last card in every column so it clears the gesture bar.
+                val end: @Composable () -> Unit = { Spacer(Modifier.height(48.dp)) }
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     val gap = Arrangement.spacedBy(12.dp)
                     if (maxWidth >= 600.dp) {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = gap) { left() }
-                            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = gap) { right() }
+                            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = gap) { left(); end() }
+                            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = gap) { right(); end() }
                         }
                     } else {
                         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = gap) {
-                            left(); right()
+                            left(); right(); end()
                         }
                     }
                 }

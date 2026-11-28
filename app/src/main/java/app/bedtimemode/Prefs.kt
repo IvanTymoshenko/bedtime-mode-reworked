@@ -42,6 +42,16 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("allow_calls", true)
         set(v) = sp.edit { putBoolean("allow_calls", v) }
 
+    /** Black & white screen during sessions started by the schedule. */
+    var greyOnSchedule: Boolean
+        get() = sp.getBoolean("grey_on_schedule", false)
+        set(v) = sp.edit { putBoolean("grey_on_schedule", v) }
+
+    /** Black & white screen when bedtime is turned on by hand (tile / app / notification). */
+    var greyOnManual: Boolean
+        get() = sp.getBoolean("grey_on_manual", false)
+        set(v) = sp.edit { putBoolean("grey_on_manual", v) }
+
     /** Also hide notifications already in the shade when bedtime starts. */
     var hideExisting: Boolean
         get() = sp.getBoolean("hide_existing", true)

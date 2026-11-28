@@ -1,5 +1,9 @@
 # Changelog — Bedtime Mode Reworked
 
+## 1.1.3
+- New: black & white screen during bedtime (Android 15+). Choose separately for scheduled bedtime and for turning it on by hand (Settings → Black & white screen). No extra permissions needed
+- Fixed: on unfolded foldables, Settings in the Fancy look couldn't scroll to the bottom of the left column
+
 ## 1.1.2
 - "Check for updates" (Settings → About) now opens a pop-up: update right there, or see that you're up to date
 

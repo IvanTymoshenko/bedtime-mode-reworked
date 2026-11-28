@@ -15,8 +15,8 @@ android {
         applicationId = "io.github.ivantymoshenko.bedtimemode"
         minSdk = 29
         targetSdk = 35
-        versionCode = 5
-        versionName = "1.1.2"
+        versionCode = 6
+        versionName = "1.1.3"
         // GitHub repo used for in-app update checks (owner/name).
         buildConfigField("String", "GITHUB_REPO", "\"IvanTymoshenko/bedtime-mode-reworked\"")
     }
@@ -37,6 +37,11 @@ android {
     }
 
     buildTypes {
+        // Test builds install as a separate app ("Bedtime RW Debug") so the real one and its
+        // settings are never touched.
+        debug {
+            applicationIdSuffix = ".debug"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

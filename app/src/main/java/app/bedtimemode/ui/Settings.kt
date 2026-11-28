@@ -79,6 +79,7 @@ internal fun LookCard(s: UiState, p: Prefs, fancy: Boolean, onClassic: () -> Uni
 @Composable
 internal fun SettingsSections(s: UiState, p: Prefs, ctx: Context, changed: () -> Unit, onApps: () -> Unit) {
     SoundCard(s, p, ctx, changed)
+    ScreenCard(s, p, ctx)
     HideCard(s, p, ctx, changed, onApps)
     NoticeCard(s, p, changed)
 }
@@ -91,6 +92,20 @@ internal fun SoundCard(s: UiState, p: Prefs, ctx: Context, changed: () -> Unit) 
         }
         SwitchRow("Let calls through", "Starred contacts, or anyone who calls twice", s.allowCalls) {
             p.allowCalls = it; Dnd.refreshRule(ctx); changed()
+        }
+    }
+}
+
+/** Black & white screen, separately for scheduled nights and for turning it on by hand. */
+@Composable
+internal fun ScreenCard(s: UiState, p: Prefs, ctx: Context) {
+    if (!Dnd.greySupported) return
+    SectionCard("Black & white screen") {
+        SwitchRow("At scheduled bedtime", "When the schedule turns bedtime on", s.greyOnSchedule) {
+            p.greyOnSchedule = it; Dnd.refreshRule(ctx)
+        }
+        SwitchRow("When turned on by hand", "From Quick Settings or this app", s.greyOnManual) {
+            p.greyOnManual = it; Dnd.refreshRule(ctx)
         }
     }
 }
